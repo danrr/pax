@@ -18,7 +18,7 @@ num_envs: 100
 num_opps: 1
 num_outer_steps: 1
 num_inner_steps: 150 # number of steps per episode
-num_iters: 1e3
+num_iters: 1000
 
 # Evaluation 
 run_path: ucl-dark/ipd/w1x0vqb7
@@ -48,7 +48,7 @@ ppo1:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: 'PPO-vs-${agent2}-parity'
   name: run-seed-${seed}

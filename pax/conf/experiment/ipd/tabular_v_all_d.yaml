@@ -46,7 +46,7 @@ ppo:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: 'Tabular-vs-${agent2}-parity'
   name: run-seed-${seed}

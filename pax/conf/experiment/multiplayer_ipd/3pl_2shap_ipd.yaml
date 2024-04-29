@@ -124,7 +124,7 @@ es:
   mean_reduce: True    # Remove mean
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: tensor-ipd
   group: 'test'
   name: 3pl_2shap_ipd_${seed}

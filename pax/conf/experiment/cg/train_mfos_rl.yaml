@@ -83,7 +83,7 @@ ppo2:
   
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: cg
   group: 'shaping-${agent1}-rl-vs-${agent2}'
   name: run-seed-${seed}

@@ -70,7 +70,7 @@ ppo2:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: 'PPO_memory-vs-${agent2}-parity'
   name: run-seed-${seed}

@@ -147,7 +147,7 @@ es:
   
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: '${agent1}-vs-${agent2}'
   name: run-seed-${seed}-pop-size-${popsize}-stevie 

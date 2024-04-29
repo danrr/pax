@@ -73,7 +73,7 @@ ppo2:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: tensor-ipd
   group: 'test'
   name: 'LOLA-vs-${agent2}'

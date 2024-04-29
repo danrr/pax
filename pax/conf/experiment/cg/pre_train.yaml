@@ -91,7 +91,7 @@ ppo:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: cg
   group: '${env_id}-${agent1}-vs-${agent2}-parity'
   name: run-seed-${seed}

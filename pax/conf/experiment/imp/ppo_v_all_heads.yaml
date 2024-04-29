@@ -16,8 +16,9 @@ runner: rl
 # Training hyperparameters
 num_envs: 100
 num_opps: 1
-num_steps: 150 # number of steps per episode
-num_iters: 1000
+num_outer_steps: 1
+num_inner_steps: 150 # number of steps per episode
+num_iters: 100
 
 # Evaluation
 
@@ -47,7 +48,7 @@ ppo_default:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: mp
   group: 'PPO-vs-${agent2}-mp-parity'
   name: run-seed-${seed}

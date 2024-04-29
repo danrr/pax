@@ -100,7 +100,7 @@ es:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: cg
   group: 'eval-shaping-${agent1}-vs-${agent2}'
   name: run-seed-${seed}

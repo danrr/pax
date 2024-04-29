@@ -4,6 +4,7 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+.idea
 
 # Local History for Visual Studio Code
 .history/
@@ -104,6 +105,7 @@ exp/
 
 # Hydra
 .hydra
+.venv/
 venv/
 plots/
 figures/

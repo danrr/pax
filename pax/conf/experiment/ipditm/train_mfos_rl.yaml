@@ -75,7 +75,7 @@ ppo2:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipditm
   group: 'shaping-rl-${agent1}-vs-${agent2}'
   name: run-seed-${seed}

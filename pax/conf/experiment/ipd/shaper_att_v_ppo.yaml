@@ -17,7 +17,7 @@ runner: evo
 top_k: 5
 popsize: 1000
 num_envs: 2
-num_opps: 10
+num_opps: 1
 num_outer_steps: 100 
 num_inner_steps: 100 
 num_iters: 1000
@@ -94,7 +94,7 @@ es:
   
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: 'EARL-${agent1}-vs-${agent2}'
   name: run-seed-${seed}-${es.algo}-pop-size-${popsize}-num-opps-${num_opps}

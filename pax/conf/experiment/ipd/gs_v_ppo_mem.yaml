@@ -87,7 +87,7 @@ es:
   mean_reduce: True    # Remove mean 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: 'GS-${agent1}-vs-${agent2}'
   name: run-seed-${seed}-pop-size-${popsize}

@@ -79,7 +79,7 @@ ppo2:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: impitm
   group: 'shaper-eval-nl-vs-${agent2}'
   name: run-seed-${seed}

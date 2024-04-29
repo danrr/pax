@@ -104,7 +104,7 @@ es:
     
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: impitm
   group: 'shaping-${agent1}-vs-${agent2}'
   name: run-seed-${seed}

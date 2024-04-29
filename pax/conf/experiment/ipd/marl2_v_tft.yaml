@@ -54,7 +54,7 @@ naive:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: 'MARL^2-${agent1}-vs-${agent2}-parity'
   name: run-seed-${seed}

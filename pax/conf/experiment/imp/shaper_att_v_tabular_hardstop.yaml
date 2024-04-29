@@ -24,7 +24,6 @@ num_iters: 1000
 att_type: 'avg'
 
 # Evaluation 
-AVG-model
 run_path: ucl-dark/imp/1dfrc0c5
 model_path: exp/EARL-Shaper-vs-Tabular/run-seed-65-OpenES-pop-size-1000-num-opps-10/2023-05-11_15.30.16.570714/generation_900
 
@@ -95,7 +94,7 @@ es:
   
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: ipd
   group: 'EARL-${agent1}-vs-${agent2}'
   name: run-seed-${seed}-${es.algo}-pop-size-${popsize}-num-opps-${num_opps}-att-type-${att_type}

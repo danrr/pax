@@ -3,7 +3,7 @@ metric:
   name: train/episode_reward/player_1
   goal: maximize
   
-entity: "ucl-dark"
+entity: "dan-ristea"
 project: "cg"
 parameters:
   ppo.num_minibatches:

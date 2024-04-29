@@ -1,0 +1,9 @@
+Things to try out:
+==================
+- Observation space is not the same for all agents
+- blackbox policy - with layer in front?
+- lower initial reward in iterated games with final set of games having higher games
+- Give one agent the episode count
+- Meta game aware agents but one with a delay (e.g. one has hidden state reset after one timestep)
+- MuJoCo?
+- Open AI hide and seek - https://openai.com/research/emergent-tool-use

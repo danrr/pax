@@ -89,7 +89,7 @@ es:
 
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: mp
   group: 'GS-${agent1}-vs-${agent2}'
   name: run-seed-${seed}-pop-size-${popsize}

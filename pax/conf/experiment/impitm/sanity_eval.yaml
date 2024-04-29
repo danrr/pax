@@ -76,7 +76,7 @@ ppo2:
   hidden_size: 16 #50
 # Logging setup
 wandb:
-  entity: "ucl-dark"
+  entity: "dan-ristea"
   project: impitm
   group: 'sanity-eval-${agent1}-vs-${agent2}'
   name: run-seed-${seed}
