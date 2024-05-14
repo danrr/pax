@@ -13,9 +13,7 @@ from pax.agents.mfos_ppo.networks import (
     make_mfos_ipditm_network,
     make_mfos_network,
     make_mfos_avg_network,
-    make_mfos_continuous_network,
 )
-from pax.envs.rice.rice import Rice
 from pax.utils import TrainingState, get_advantages
 
 
@@ -384,7 +382,7 @@ class PPO(AgentInterface):
 
         def make_initial_state(
             key: Any, initial_hidden_state: jnp.ndarray
-        ) -> TrainingState:
+        ) -> tuple[TrainingState, MemoryState]:
             """Initialises the training state (parameters and optimiser state)."""
 
             # We pass through initial_hidden_state so its easy to batch memory
@@ -531,7 +529,7 @@ class PPO(AgentInterface):
     def meta_policy(self, mem: MemoryState):
         """Policy function for the meta agent"""
 
-        # update memory with the running th from previous epsiode
+        # update memory with the running th from previous episode
         mem = mem._replace(th=mem.curr_th)
 
         # reset memory of agent
@@ -556,22 +554,7 @@ def make_mfos_agent(
     """Make PPO agent"""
     # Network
 
-    if args.env_id == "coin_game":
-        network, initial_hidden_state = make_mfos_network(
-            action_spec,
-            agent_args.hidden_size,
-        )
-    elif args.env_id in ["Cournot", Rice.env_id]:
-        network, initial_hidden_state = make_mfos_continuous_network(
-            action_spec,
-            agent_args.hidden_size,
-        )
-    elif args.env_id == "Fishery":
-        network, initial_hidden_state = make_mfos_continuous_network(
-            action_spec,
-            agent_args.hidden_size,
-        )
-    elif args.env_id == "InTheMatrix":
+    if args.env_id == "InTheMatrix":
         network, initial_hidden_state = make_mfos_ipditm_network(
             action_spec,
             agent_args.hidden_size,

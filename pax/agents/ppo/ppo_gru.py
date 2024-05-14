@@ -10,18 +10,10 @@ import optax
 from pax import utils
 from pax.agents.agent import AgentInterface
 from pax.agents.ppo.networks import (
-    make_GRU_cartpole_network,
-    make_GRU_coingame_network,
     make_GRU_ipd_network,
     make_GRU_ipditm_network,
-    make_GRU_fishery_network,
-    make_GRU_rice_network,
 )
-from pax.envs.rice.rice import Rice
-from pax.envs.rice.c_rice import ClubRice
 from pax.utils import MemoryState, TrainingState, get_advantages
-
-# from dm_env import TimeStep
 
 
 class Batch(NamedTuple):
@@ -100,6 +92,7 @@ class PPO(AgentInterface):
             arguments are of length = rollout length + 1"""
             # 'Zero out' the terminated states
             discounts = gamma * jnp.logical_not(dones)
+
             reverse_batch = (
                 jnp.flip(values[:-1], axis=0),
                 jnp.flip(rewards, axis=0),
@@ -206,6 +199,7 @@ class PPO(AgentInterface):
             state: TrainingState, sample: NamedTuple
         ) -> Tuple[TrainingState, Dict[str, jnp.ndarray]]:
             """Performs a minibatch SGD step, returning new state and metrics."""
+
             # Extract data
             (
                 observations,
@@ -225,7 +219,6 @@ class PPO(AgentInterface):
                 sample.hiddens,
             )
 
-            # batch_gae_advantages = jax.vmap(gae_advantages, 1, (0, 0))
             advantages, target_values = gae_advantages(
                 rewards=rewards, values=behavior_values, dones=dones
             )
@@ -242,6 +235,7 @@ class PPO(AgentInterface):
                 behavior_values=behavior_values,
                 hiddens=hiddens,
             )
+
             # Concatenate all trajectories. Reshape from [num_envs, num_steps, ..]
             # to [num_envs * num_steps,..]
             assert len(target_values.shape) > 1
@@ -256,6 +250,7 @@ class PPO(AgentInterface):
             batch = jax.tree_util.tree_map(
                 lambda x: x.reshape((batch_size,) + x.shape[2:]), trajectories
             )
+
             # Compute gradients.
             grad_fn = jax.jit(jax.grad(loss, has_aux=True))
 
@@ -410,7 +405,7 @@ class PPO(AgentInterface):
                 action_extras["values"],
             )
 
-            _value = jax.lax.expand_dims(_value, [0])
+            # _value = jax.lax.expand_dims(_value, [0])
 
             # need to add final value here
             traj_batch = traj_batch._replace(
@@ -476,7 +471,8 @@ class PPO(AgentInterface):
     ):
 
         """Update the agent -> only called at the end of a trajectory"""
-        _1, _2, mem = self._policy(state, obs, mem)
+        _, _, mem = self._policy(state, obs, mem)
+
         traj_batch = self._prepare_batch(
             traj_batch, traj_batch.dones[-1, ...], mem.extras
         )
@@ -495,7 +491,6 @@ class PPO(AgentInterface):
         return state, mem, metrics
 
 
-# TODO: seed, and player_id not used in CartPole
 def make_gru_agent(
     args,
     agent_args,
@@ -507,53 +502,9 @@ def make_gru_agent(
 ):
     """Make PPO agent"""
     # Network
-    if args.env_id == "CartPole-v1":
-        network, initial_hidden_state = make_GRU_cartpole_network(action_spec)
-    elif args.env_id == "coin_game":
-        network, initial_hidden_state = make_GRU_coingame_network(
-            action_spec,
-            agent_args.with_cnn,
-            agent_args.hidden_size,
-            agent_args.output_channels,
-            agent_args.kernel_shape,
-        )
-    elif args.env_id in [
-        "iterated_matrix_game",
-        "iterated_tensor_game",
-        "iterated_nplayer_tensor_game",
-        "third_party_punishment",
-        "third_party_random",
-    ]:
+    if args.env_id == "iterated_matrix_game":
         network, initial_hidden_state = make_GRU_ipd_network(
             action_spec, agent_args.hidden_size
-        )
-    elif args.env_id == "Fishery":
-        network, initial_hidden_state = make_GRU_fishery_network(
-            action_spec, agent_args.hidden_size
-        )
-    elif args.env_id == "iterated_tensor_game":
-        network, initial_hidden_state = make_GRU_ipd_network(
-            action_spec, agent_args.hidden_size
-        )
-    elif args.env_id == "iterated_nplayer_tensor_game":
-        network, initial_hidden_state = make_GRU_ipd_network(
-            action_spec, agent_args.hidden_size
-        )
-    elif args.env_id == "Fishery":
-        network, initial_hidden_state = make_GRU_fishery_network(
-            action_spec, agent_args.hidden_size
-        )
-    elif args.env_id == "Cournot":
-        network, initial_hidden_state = make_GRU_fishery_network(
-            action_spec, agent_args.hidden_size
-        )
-    elif args.env_id in [Rice.env_id, "Rice-v1"]:
-        network, initial_hidden_state = make_GRU_rice_network(
-            action_spec, agent_args.hidden_size, args.rice_v2_network
-        )
-    elif args.env_id == ClubRice.env_id:
-        network, initial_hidden_state = make_GRU_rice_network(
-            action_spec, agent_args.hidden_size, args.rice_v2_network
         )
     elif args.env_id == "InTheMatrix":
         network, initial_hidden_state = make_GRU_ipditm_network(

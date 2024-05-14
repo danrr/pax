@@ -1,6 +1,5 @@
 import os
 import time
-from datetime import datetime
 from typing import Any, Callable, NamedTuple
 
 import jax
@@ -12,7 +11,7 @@ from pax.utils import MemoryState, TrainingState, save
 
 # TODO: import when evosax library is updated
 # from evosax.utils import ESLog
-from pax.watchers import ESLog, cg_visitation, ipd_visitation, ipditm_stats
+from pax.watchers import ESLog, ipd_visitation, ipditm_stats
 
 MAX_WANDB_CALLS = 1000
 
@@ -29,15 +28,14 @@ class Sample(NamedTuple):
     hiddens: jnp.ndarray
 
 
-class EvoMixedPayoffRunner:
+class EvoRunnerSingle:
     """
-    Evoluationary Strategy runner provides a convenient example for quickly writing
+    Evolutionary Strategy runner provides a convenient example for quickly writing
     a MARL runner for PAX. The EvoRunner class can be used to
     run an RL agent (optimised by an Evolutionary Strategy) against an Reinforcement Learner.
     It composes together agents, watchers, and the environment.
     Within the init, we declare vmaps and pmaps for training.
     The environment provided must conform to a meta-environment.
-    Payoff matrix is randomly sampled at each rollout. Each opponent has a different payoff matrix.
     Args:
         agents (Tuple[agents]):
             The set of agents that will run in the experiment. Note, ordering is
@@ -58,23 +56,20 @@ class EvoMixedPayoffRunner:
     def __init__(
         self, agents, env, strategy, es_params, param_reshaper, save_dir, args
     ):
+        self.train_steps = 0
+        self.train_episodes = 0
+        self.start_time = time.time()
         self.args = args
         self.algo = args.es.algo
         self.es_params = es_params
-        self.generations = 0
         self.num_opps = args.num_opps
         self.param_reshaper = param_reshaper
         self.popsize = args.popsize
         self.random_key = jax.random.PRNGKey(args.seed)
-        self.start_datetime = datetime.now()
         self.save_dir = save_dir
-        self.start_time = time.time()
         self.strategy = strategy
         self.top_k = args.top_k
-        self.train_steps = 0
-        self.train_episodes = 0
         self.ipd_stats = jax.jit(ipd_visitation)
-        self.cg_stats = jax.jit(jax.vmap(cg_visitation))
         self.ipditm_stats = jax.jit(
             jax.vmap(ipditm_stats, in_axes=(0, 2, 2, None))
         )
@@ -92,7 +87,7 @@ class EvoMixedPayoffRunner:
         # num opps
         env.reset = jax.vmap(env.reset, (0, None), 0)
         env.step = jax.vmap(
-            env.step, (0, 0, 0, 0), 0  # rng, state, actions, params
+            env.step, (0, 0, 0, None), 0  # rng, state, actions, params
         )
         # pop size
         env.reset = jax.jit(jax.vmap(env.reset, (0, None), 0))
@@ -199,8 +194,6 @@ class EvoMixedPayoffRunner:
             rngs = self.split(rngs, 4)
             env_rng = rngs[:, :, :, 0, :]
 
-            # a1_rng = rngs[:, :, :, 1, :]
-            # a2_rng = rngs[:, :, :, 2, :]
             rngs = rngs[:, :, :, 3, :]
 
             a1, a1_state, new_a1_mem = agent1.batch_policy(
@@ -288,6 +281,7 @@ class EvoMixedPayoffRunner:
                 a2_state,
                 a2_mem,
             )
+
             return (
                 rngs,
                 obs1,
@@ -315,12 +309,6 @@ class EvoMixedPayoffRunner:
                 * args.num_opps
                 * args.popsize
             ).reshape((args.popsize, args.num_opps, args.num_envs, -1))
-            # set payoff matrix to random integers of shape [4,2]
-            _rng_run, payoff_rng = jax.random.split(_rng_run)
-            payoff_matrix = -jax.random.randint(payoff_rng, minval=0, maxval=10, shape=(4,2), dtype=jnp.int8)
-            payoff_matrix = jnp.tile(payoff_matrix, (args.num_opps, 1, 1))
-            # jax.debug.breakpoint()
-            _env_params.payoff_matrix = payoff_matrix
 
             obs, env_state = env.reset(env_rngs, _env_params)
             rewards = [
@@ -388,16 +376,7 @@ class EvoMixedPayoffRunner:
             fitness = traj_1.rewards.mean(axis=(0, 1, 3, 4))
             other_fitness = traj_2.rewards.mean(axis=(0, 1, 3, 4))
             # Stats
-            if args.env_id == "coin_game":
-                env_stats = jax.tree_util.tree_map(
-                    lambda x: x,
-                    self.cg_stats(env_state),
-                )
-
-                rewards_1 = traj_1.rewards.sum(axis=1).mean()
-                rewards_2 = traj_2.rewards.sum(axis=1).mean()
-
-            elif args.env_id in [
+            if args.env_id in [
                 "iterated_matrix_game",
             ]:
                 env_stats = jax.tree_util.tree_map(
@@ -504,7 +483,7 @@ class EvoMixedPayoffRunner:
         a1_state, a1_mem = agent1._state, agent1._mem
 
         for gen in range(num_gens):
-            rng, rng_run, rng_evo, rng_key = jax.random.split(rng, 4)
+            rng, rng_run, rng_evo = jax.random.split(rng, 3)
 
             # Ask
             x, evo_state = strategy.ask(rng_evo, evo_state, es_params)
@@ -514,7 +493,6 @@ class EvoMixedPayoffRunner:
                     lambda x: jax.lax.expand_dims(x, (0,)), params
                 )
             # Evo Rollout
-            # jax.debug.breakpoint()
             (
                 fitness,
                 other_fitness,

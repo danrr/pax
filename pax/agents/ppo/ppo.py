@@ -10,19 +10,9 @@ import optax
 from pax import utils
 from pax.agents.agent import AgentInterface
 from pax.agents.ppo.networks import (
-    make_coingame_network,
     make_ipditm_network,
-    make_sarl_network,
-    make_cournot_network,
-    make_fishery_network,
-    make_rice_sarl_network,
     make_ipd_network,
 )
-from pax.envs.iterated_matrix_game import IteratedMatrixGame
-from pax.envs.iterated_tensor_game_n_player import IteratedTensorGameNPlayer
-from pax.envs.rice.c_rice import ClubRice
-from pax.envs.rice.rice import Rice
-from pax.envs.rice.sarl_rice import SarlRice
 from pax.utils import (
     Logger,
     MemoryState,
@@ -456,6 +446,7 @@ class PPO(AgentInterface):
         state: TrainingState,
         mem: MemoryState,
     ):
+
         """Update the agent -> only called at the end of a trajectory"""
         _, _, mem = self._policy(state, obs, mem)
 
@@ -487,17 +478,7 @@ def make_agent(
 ):
     """Make PPO agent"""
     print(f"Making network for {args.env_id}")
-    if args.env_id == "coin_game":
-        network = make_coingame_network(
-            action_spec,
-            tabular,
-            agent_args.with_cnn,
-            agent_args.separate,
-            agent_args.hidden_size,
-            agent_args.output_channels,
-            agent_args.kernel_shape,
-        )
-    elif args.env_id == "InTheMatrix":
+    if args.env_id == "InTheMatrix":
         network = make_ipditm_network(
             action_spec,
             agent_args.separate,
@@ -506,33 +487,10 @@ def make_agent(
             agent_args.output_channels,
             agent_args.kernel_shape,
         )
-    elif args.env_id in [
-        "iterated_matrix_game",
-        "iterated_tensor_game",
-        "iterated_nplayer_tensor_game",
-        "third_party_punishment",
-        "third_party_random",
-    ]:
+    elif args.env_id == "iterated_matrix_game":
         network = make_ipd_network(
             action_spec, tabular, agent_args.hidden_size
         )
-    elif args.env_id == "Cournot":
-        network = make_cournot_network(action_spec, agent_args.hidden_size)
-    elif args.env_id == "Fishery":
-        network = make_fishery_network(action_spec, agent_args.hidden_size)
-    elif args.env_id == SarlRice.env_id:
-        network = make_rice_sarl_network(action_spec, agent_args.hidden_size)
-    elif args.env_id == Rice.env_id:
-        network = make_rice_sarl_network(action_spec, agent_args.hidden_size)
-    elif args.env_id == ClubRice.env_id:
-        network = make_rice_sarl_network(action_spec, agent_args.hidden_size)
-    elif args.runner == "sarl":
-        network = make_sarl_network(action_spec)
-    elif args.env_id in [
-        IteratedMatrixGame.env_id,
-        IteratedTensorGameNPlayer.env_id,
-    ]:
-        network = make_ipd_network(action_spec, True, agent_args.hidden_size)
     else:
         raise NotImplementedError(
             f"No ppo network implemented for env {args.env_id}"

@@ -9,11 +9,7 @@ import optax
 
 from pax import utils
 from pax.agents.agent import AgentInterface
-from pax.agents.naive.network import (
-    make_coingame_network,
-    make_network,
-    make_rice_network,
-)
+from pax.agents.naive.network import make_network
 from pax.utils import MemoryState, TrainingState, get_advantages
 
 
@@ -291,7 +287,7 @@ class NaiveLearner(AgentInterface):
 
             return new_state, new_memory, metrics
 
-        def make_initial_state(key: Any, hidden: jnp.array) -> TrainingState:
+        def make_initial_state(key: Any, hidden: jnp.array) -> tuple[TrainingState, MemoryState]:
             """Initialises the training state (parameters and optimiser state)."""
             key, subkey = jax.random.split(key)
             dummy_obs = jnp.zeros(shape=obs_spec)
@@ -397,13 +393,7 @@ class NaiveLearner(AgentInterface):
 def make_naive_pg(args, obs_spec, action_spec, seed: int, player_id: int):
     """Make Naive Learner Policy Gradient agent"""
 
-    if args.env_id == "coin_game":
-        print(f"Making network for {args.env_id} with CNN")
-        network = make_coingame_network(action_spec, args)
-    elif args.env_id == "Rice-N":
-        network = make_rice_network(action_spec)
-    else:
-        network = make_network(action_spec)
+    network = make_network(action_spec)
 
     optimizer = optax.chain(
         optax.clip_by_global_norm(args.naive.max_gradient_norm),

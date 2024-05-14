@@ -7,7 +7,7 @@ import jax.numpy as jnp
 
 import wandb
 from pax.utils import load
-from pax.watchers import cg_visitation, ipd_visitation
+from pax.watchers import  ipd_visitation
 
 MAX_WANDB_CALLS = 10000
 
@@ -49,7 +49,6 @@ class EvalHardstopRunner:
         self.run_path = args.run_path
         self.model_path = args.model_path
         self.ipd_stats = jax.jit(ipd_visitation)
-        self.cg_stats = jax.jit(cg_visitation)
         # VMAP for num envs: we vmap over the rng but not params
         env.reset = jax.vmap(env.reset, (0, None), 0)
         env.step = jax.vmap(
@@ -411,15 +410,7 @@ class EvalHardstopRunner:
             self.train_episodes += 1
             if i % log_interval == 0:
                 print(f"Episode {i}")
-                if self.args.env_id == "coin_game":
-                    env_stats = jax.tree_util.tree_map(
-                        lambda x: x.item(),
-                        self.cg_stats(env_state),
-                    )
-                    rewards_1 = traj_1.rewards.sum(axis=1).mean()
-                    rewards_2 = traj_2.rewards.sum(axis=1).mean()
-
-                elif self.args.env_type in [
+                if self.args.env_type in [
                     "meta",
                     "sequential",
                 ]:

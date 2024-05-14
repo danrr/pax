@@ -15,6 +15,8 @@ class EnvState:
 @chex.dataclass
 class EnvParams:
     payoff_matrix: chex.ArrayDevice
+    observation_includes_time: Optional[bool]
+    blind_time_p2: Optional[bool]
 
 
 class IteratedMatrixGame(environment.Environment):
@@ -53,21 +55,34 @@ class IteratedMatrixGame(environment.Environment):
                 0 * (1 - a1) * (1 - a2)
                 + 1 * (1 - a1) * a2
                 + 2 * a1 * (1 - a2)
-                + 3 * (a1) * (a2)
+                + 3 * a1 * a2
             )
 
             s2 = (
                 0 * (1 - a1) * (1 - a2)
                 + 1 * a1 * (1 - a2)
                 + 2 * (1 - a1) * a2
-                + 3 * (a1) * (a2)
+                + 3 * a1 * a2
             )
             # if first step then return START state.
             reset_inner = inner_t == num_inner_steps
             s1 = jax.lax.select(reset_inner, jnp.int8(4), jnp.int8(s1))
             s2 = jax.lax.select(reset_inner, jnp.int8(4), jnp.int8(s2))
-            obs1 = jax.nn.one_hot(s1, 5, dtype=jnp.int8)
-            obs2 = jax.nn.one_hot(s2, 5, dtype=jnp.int8)
+            time_fraction = jnp.array([inner_t/num_inner_steps])
+            obs1 = jax.lax.select(
+                params.observation_includes_time,
+                jnp.append(jax.nn.one_hot(s1, 5), time_fraction),
+                jax.nn.one_hot(s1, 6)
+            )
+            obs2 = jax.lax.select(
+                params.observation_includes_time,
+                jax.lax.select(
+                    params.blind_time_p2,
+                    jax.nn.one_hot(s2, 6),
+                    jnp.append(jax.nn.one_hot(s2, 5), time_fraction),
+                ),
+                jax.nn.one_hot(s2, 6)
+            )
 
             # out step keeping
             inner_t = jax.lax.select(
@@ -92,7 +107,7 @@ class IteratedMatrixGame(environment.Environment):
                 inner_t=jnp.zeros((), dtype=jnp.int8),
                 outer_t=jnp.zeros((), dtype=jnp.int8),
             )
-            obs = jax.nn.one_hot(4 * jnp.ones(()), 5, dtype=jnp.int8)
+            obs = jax.nn.one_hot(4, 6)
             return (obs, obs), state
 
         # overwrite Gymnax as it makes single-agent assumptions
@@ -115,10 +130,11 @@ class IteratedMatrixGame(environment.Environment):
         """Action space of the environment."""
         return spaces.Discrete(4)
 
-    def observation_space(self, params: EnvParams) -> spaces.Discrete:
+    def observation_space(self, params: EnvParams) -> spaces.Box:
         """Observation space of the environment."""
-        return spaces.Discrete(5)
+        return spaces.Box(low=0, high=1, shape=6)
 
     def state_space(self, params: EnvParams) -> spaces.Discrete:
         """State space of the environment."""
+        # todo Dan: I don't think this is right
         return spaces.Discrete(5)

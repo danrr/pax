@@ -31,7 +31,7 @@ class CategoricalValueHead(hk.Module):
     def __call__(self, inputs: jnp.ndarray):
         logits = self._logit_layer(inputs)
         value = jnp.squeeze(self._value_layer(inputs), axis=-1)
-        return (distrax.Categorical(logits=logits), value)
+        return distrax.Categorical(logits=logits), value
 
 
 class CategoricalValueHead_ipd(hk.Module):
@@ -146,7 +146,7 @@ class CategoricalValueHeadSeparate_ipditm(hk.Module):
 
         value = self._value_body(inputs)
         value = jnp.squeeze(self._value_layer(value), axis=-1)
-        return (distrax.Categorical(logits=logits), value)
+        return distrax.Categorical(logits=logits), value
 
 
 class ContinuousValueHead(hk.Module):
@@ -172,7 +172,7 @@ class ContinuousValueHead(hk.Module):
     def __call__(self, inputs: jnp.ndarray):
         logits = self._logit_layer(inputs)
         value = jnp.squeeze(self._value_layer(inputs), axis=-1)
-        return (distrax.MultivariateNormalDiag(loc=logits), value)
+        return distrax.MultivariateNormalDiag(loc=logits), value
 
 
 class Tabular(hk.Module):
@@ -330,7 +330,6 @@ def make_GRU_ipd_avg_network(num_actions: int, hidden_size: int):
         """forward function"""
         gru = hk.GRU(hidden_size)
         old_state = state
-        # jax.debug.breakpoint()
         state = jnp.mean(state, axis=0, keepdims=True).repeat(state.shape[0], axis=0)
         state = 0.5*state + 0.5*old_state
         embedding, state = gru(inputs, state)
@@ -349,7 +348,6 @@ def make_GRU_ipd_att_network(num_actions: int, hidden_size: int):
         inputs: jnp.ndarray, state: jnp.ndarray
     ) -> Tuple[Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
         """forward function"""
-        # print(state.shape, 'STATE shape')
         gru = hk.GRU(hidden_size)
         layer_norm1 = hk.LayerNorm(
             axis=-2, create_scale=True, create_offset=True
@@ -386,133 +384,6 @@ def make_GRU_ipd_att_network(num_actions: int, hidden_size: int):
 
     network = hk.without_apply_rng(hk.transform(forward_fn))
 
-    return network, hidden_state
-
-
-def make_GRU_cartpole_network(num_actions: int):
-    hidden_size = 256
-    hidden_state = jnp.zeros((1, hidden_size))
-
-    def forward_fn(
-        inputs: jnp.ndarray, state: jnp.ndarray
-    ) -> Tuple[Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
-        """forward function"""
-        torso = hk.nets.MLP(
-            [hidden_size, hidden_size],
-            w_init=hk.initializers.Orthogonal(jnp.sqrt(2)),
-            b_init=hk.initializers.Constant(0),
-            activate_final=True,
-        )
-        gru = hk.GRU(hidden_size)
-        embedding = torso(inputs)
-        embedding, state = gru(embedding, state)
-        logits, values = CategoricalValueHead(num_actions)(embedding)
-        return (logits, values), state
-
-    network = hk.without_apply_rng(hk.transform(forward_fn))
-
-    return network, hidden_state
-
-
-def make_GRU_coingame_network(
-    num_actions: int,
-    with_cnn: bool,
-    hidden_size: int,
-    output_channels: int,
-    kernel_shape: Tuple[int],
-):
-    hidden_state = jnp.zeros((1, hidden_size))
-
-    def forward_fn(
-        inputs: jnp.ndarray, state: jnp.ndarray
-    ) -> Tuple[Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
-
-        if with_cnn:
-            torso = CNN(output_channels, kernel_shape)(inputs)
-
-        else:
-            torso = hk.nets.MLP(
-                [hidden_size],
-                w_init=hk.initializers.Orthogonal(jnp.sqrt(2)),
-                b_init=hk.initializers.Constant(0),
-                activate_final=True,
-            )
-        gru = hk.GRU(
-            hidden_size,
-            w_h_init=hk.initializers.Orthogonal(jnp.sqrt(2)),
-            w_i_init=hk.initializers.Orthogonal(jnp.sqrt(2)),
-            b_init=hk.initializers.Constant(0),
-        )
-
-        embedding = torso(inputs)
-        embedding, state = gru(embedding, state)
-        logits, values = CategoricalValueHead(num_actions)(embedding)
-
-        return (logits, values), state
-
-    network = hk.without_apply_rng(hk.transform(forward_fn))
-    return network, hidden_state
-
-def make_GRU_coingame_att_network(
-    num_actions: int,
-    with_cnn: bool,
-    hidden_size: int,
-    output_channels: int,
-    kernel_shape: Tuple[int],
-):
-    hidden_state = jnp.zeros((1, hidden_size))
-
-    def forward_fn(
-        inputs: jnp.ndarray, state: jnp.ndarray
-    ) -> Tuple[Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
-
-        if with_cnn:
-            torso = CNN(output_channels, kernel_shape)(inputs)
-
-        else:
-            torso = hk.nets.MLP(
-                [hidden_size],
-                w_init=hk.initializers.Orthogonal(jnp.sqrt(2)),
-                b_init=hk.initializers.Constant(0),
-                activate_final=True,
-            )
-        gru = hk.GRU(
-            hidden_size,
-            w_h_init=hk.initializers.Orthogonal(jnp.sqrt(2)),
-            w_i_init=hk.initializers.Orthogonal(jnp.sqrt(2)),
-            b_init=hk.initializers.Constant(0),
-        )
-        layer_norm1 = hk.LayerNorm(
-            axis=-2, create_scale=True, create_offset=True
-        )
-
-        num_heads = 8
-        shape_attn = hk.MultiHeadAttention(
-            num_heads=num_heads,
-            key_size=hidden_size // num_heads,
-            w_init=hk.initializers.Orthogonal(jnp.sqrt(1)),
-        )
-
-        layer_norm2 = hk.LayerNorm(
-            axis=-2, create_scale=True, create_offset=True
-        )
-        shape_mlp = hk.Linear(
-            hidden_size,
-            w_init=hk.initializers.Orthogonal(jnp.sqrt(1)),
-            b_init=hk.initializers.Constant(0),
-        )
-
-        embedding = torso(inputs)
-        state_attn = layer_norm1(state)
-        state_attn = shape_attn(state_attn, state_attn, state_attn)
-        state = layer_norm2(state + state_attn)
-        state = shape_mlp(state)
-        embedding, state = gru(embedding, state)
-        logits, values = CategoricalValueHead(num_actions)(embedding)
-
-        return (logits, values), state
-
-    network = hk.without_apply_rng(hk.transform(forward_fn))
     return network, hidden_state
 
 

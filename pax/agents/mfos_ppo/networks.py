@@ -141,8 +141,8 @@ def make_mfos_network(num_actions: int, hidden_size: int):
     hidden_state = jnp.zeros((1, 3 * hidden_size))
 
     def forward_fn(
-        inputs: jnp.ndarray,
-        state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray],
+            inputs: jnp.ndarray,
+            state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray],
     ) -> Tuple[Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
         mfos = ActorCriticMFOS(num_actions, hidden_size)
         logits, values, state = mfos(inputs, state)
@@ -151,21 +151,22 @@ def make_mfos_network(num_actions: int, hidden_size: int):
     network = hk.without_apply_rng(hk.transform(forward_fn))
     return network, hidden_state
 
+
 def make_mfos_avg_network(num_actions: int, hidden_size: int):
     hidden_state = jnp.zeros((1, 3 * hidden_size))
 
     def forward_fn(
-        inputs: jnp.ndarray,
-        state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray],
+            inputs: jnp.ndarray,
+            state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray],
     ) -> Tuple[Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
         mfos = ActorCriticMFOS(num_actions, hidden_size)
         hidden_t, hidden_a, hidden_v = jnp.split(state, 3, axis=-1)
         avg_hidden_t = jnp.mean(hidden_t, axis=0, keepdims=True).repeat(state.shape[0], axis=0)
         avg_hidden_a = jnp.mean(hidden_a, axis=0, keepdims=True).repeat(state.shape[0], axis=0)
         avg_hidden_v = jnp.mean(hidden_v, axis=0, keepdims=True).repeat(state.shape[0], axis=0)
-        hidden_t = 0.5*hidden_t + 0.5*avg_hidden_t
-        hidden_a = 0.5*hidden_a + 0.5*avg_hidden_a
-        hidden_v = 0.5*hidden_v + 0.5*avg_hidden_v
+        hidden_t = 0.5 * hidden_t + 0.5 * avg_hidden_t
+        hidden_a = 0.5 * hidden_a + 0.5 * avg_hidden_a
+        hidden_v = 0.5 * hidden_v + 0.5 * avg_hidden_v
         state = jnp.concatenate([hidden_t, hidden_a, hidden_v], axis=-1)
         logits, values, state = mfos(inputs, state)
         return (logits, values), state
@@ -174,29 +175,14 @@ def make_mfos_avg_network(num_actions: int, hidden_size: int):
     return network, hidden_state
 
 
-def make_mfos_continuous_network(num_actions: int, hidden_size: int):
-    hidden_state = jnp.zeros((1, 3 * hidden_size))
-
-    def forward_fn(
-        inputs: jnp.ndarray,
-        state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray],
-    ) -> Tuple[Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
-        mfos = ActorCriticMFOS(num_actions, hidden_size, categorical=False)
-        logits, values, state = mfos(inputs, state)
-        return (logits, values), state
-
-    network = hk.without_apply_rng(hk.transform(forward_fn))
-    return network, hidden_state
-
-
 def make_mfos_ipditm_network(
-    num_actions: int, hidden_size: int, output_channels, kernel_shape
+        num_actions: int, hidden_size: int, output_channels, kernel_shape
 ):
     hidden_state = jnp.zeros((1, 3 * hidden_size))
 
     def forward_fn(
-        inputs: jnp.ndarray,
-        state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray],
+            inputs: jnp.ndarray,
+            state: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray],
     ) -> Tuple[Tuple[Categorical, jnp.ndarray], jnp.ndarray]:
         mfos = CNNMFOS(num_actions, hidden_size, output_channels, kernel_shape)
         logits, values, state = mfos(inputs, state)

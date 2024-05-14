@@ -12,7 +12,7 @@ from pax.utils import MemoryState, TrainingState, save
 
 # TODO: import when evosax library is updated
 # from evosax.utils import ESLog
-from pax.watchers import ESLog, cg_visitation, ipd_visitation, ipditm_stats
+from pax.watchers import ESLog, ipd_visitation, ipditm_stats
 
 MAX_WANDB_CALLS = 1000
 
@@ -31,7 +31,7 @@ class Sample(NamedTuple):
 
 class EvoHardstopRunner:
     """
-    Evoluationary Strategy runner provides a convenient example for quickly writing
+    Evolutionary Strategy runner provides a convenient example for quickly writing
     a MARL runner for PAX. The EvoRunner class can be used to
     run an RL agent (optimised by an Evolutionary Strategy) against an Reinforcement Learner.
     It composes together agents, watchers, and the environment.
@@ -57,23 +57,20 @@ class EvoHardstopRunner:
     def __init__(
         self, agents, env, strategy, es_params, param_reshaper, save_dir, args
     ):
+        self.train_steps = 0
+        self.train_episodes = 0
+        self.start_time = time.time()
         self.args = args
         self.algo = args.es.algo
         self.es_params = es_params
-        self.generations = 0
         self.num_opps = args.num_opps
         self.param_reshaper = param_reshaper
         self.popsize = args.popsize
         self.random_key = jax.random.PRNGKey(args.seed)
-        self.start_datetime = datetime.now()
         self.save_dir = save_dir
-        self.start_time = time.time()
         self.strategy = strategy
         self.top_k = args.top_k
-        self.train_steps = 0
-        self.train_episodes = 0
         self.ipd_stats = jax.jit(ipd_visitation)
-        self.cg_stats = jax.jit(jax.vmap(cg_visitation))
         self.ipditm_stats = jax.jit(
             jax.vmap(ipditm_stats, in_axes=(0, 2, 2, None))
         )
@@ -199,8 +196,6 @@ class EvoHardstopRunner:
             rngs = self.split(rngs, 4)
             env_rng = rngs[:, :, :, 0, :]
 
-            # a1_rng = rngs[:, :, :, 1, :]
-            # a2_rng = rngs[:, :, :, 2, :]
             rngs = rngs[:, :, :, 3, :]
 
             a1, a1_state, new_a1_mem = agent1.batch_policy(
@@ -282,8 +277,7 @@ class EvoHardstopRunner:
             # MFOS has to take a meta-action for each episode
             if args.agent1 == "MFOS":
                 a1_mem = agent1.meta_policy(a1_mem)
-            # jax.debug.print("Step Size: {x}", x=a2_state.opt_state[2].hyperparams['step_size'][0])
-            # jax.debug.print("Counter: {x}", x=counter[0])
+
             # update second agent
             a2_state.opt_state[2].hyperparams['step_size'] = jnp.where(counter <= 0, 0.0, a2_state.opt_state[2].hyperparams['step_size'])
             a2_state, a2_mem, a2_metrics = agent2.batch_update(
@@ -292,7 +286,7 @@ class EvoHardstopRunner:
                 a2_state,
                 a2_mem,
             )
-            
+
             return (
                 rngs,
                 obs1,
@@ -350,7 +344,6 @@ class EvoHardstopRunner:
                 counter = jnp.tile(random_numbers, (1000, 1))
                 # a2_state.opt_state[2].hyperparams['step_size'] = learning_rates
                 # jax.debug.breakpoint()
-            
 
             # run trials
             vals, stack = jax.lax.scan(
@@ -391,16 +384,7 @@ class EvoHardstopRunner:
             fitness = traj_1.rewards.mean(axis=(0, 1, 3, 4))
             other_fitness = traj_2.rewards.mean(axis=(0, 1, 3, 4))
             # Stats
-            if args.env_id == "coin_game":
-                env_stats = jax.tree_util.tree_map(
-                    lambda x: x,
-                    self.cg_stats(env_state),
-                )
-
-                rewards_1 = traj_1.rewards.sum(axis=1).mean()
-                rewards_2 = traj_2.rewards.sum(axis=1).mean()
-
-            elif args.env_id in [
+            if args.env_id in [
                 "iterated_matrix_game",
             ]:
                 env_stats = jax.tree_util.tree_map(

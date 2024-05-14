@@ -7,7 +7,7 @@ from dm_env import Environment, TimeStep, specs
 
 
 class BatchedEnvs(Environment):
-    """Batches a number of cartpole environments that are called sequentially.
+    """Batches a number of environments that are called sequentially.
     Similar to OpenAIs SyncVectorEnv"""
 
     def __init__(

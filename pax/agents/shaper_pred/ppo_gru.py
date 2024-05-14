@@ -10,8 +10,6 @@ import optax
 from pax import utils
 from pax.agents.agent import AgentInterface
 from pax.agents.shaper_att.networks import (
-    make_GRU_cartpole_network,
-    make_GRU_coingame_att_network,
     make_GRU_ipd_network,
     make_GRU_ipd_avg_network,
     make_GRU_ipd_att_network,
@@ -19,8 +17,6 @@ from pax.agents.shaper_att.networks import (
     make_GRU_ipditm_avg_network,
 )
 from pax.utils import MemoryState, TrainingState, get_advantages
-
-# from dm_env import TimeStep
 
 
 class Batch(NamedTuple):
@@ -363,7 +359,7 @@ class PPO(AgentInterface):
 
         def make_initial_state(
             key: Any, initial_hidden_state: jnp.ndarray
-        ) -> TrainingState:
+        ) -> Tuple[TrainingState, MemoryState]:
             """Initialises the training state (parameters and optimiser state)."""
 
             # We pass through initial_hidden_state so its easy to batch memory
@@ -396,7 +392,6 @@ class PPO(AgentInterface):
                 },
             )
 
-        # @jax.jit
         def prepare_batch(
             traj_batch: NamedTuple,
             done: Any,
@@ -475,7 +470,6 @@ class PPO(AgentInterface):
     ):
 
         """Update the agent -> only called at the end of a trajectory"""
-
         _, _, mem = self._policy(state, obs, mem)
         traj_batch = self._prepare_batch(
             traj_batch, traj_batch.dones[-1, ...], mem.extras
@@ -495,7 +489,6 @@ class PPO(AgentInterface):
         return state, mem, metrics
 
 
-# TODO: seed, and player_id not used in CartPole
 def make_shaper_agent(
     args,
     agent_args,
@@ -507,32 +500,22 @@ def make_shaper_agent(
 ):
     """Make PPO agent"""
     # Network
-    if args.env_id == "CartPole-v1":
-        network, initial_hidden_state = make_GRU_cartpole_network(action_spec)
-    elif args.env_id == "coin_game":
-        network, initial_hidden_state = make_GRU_coingame_att_network(
-            action_spec,
-            agent_args.with_cnn,
-            agent_args.hidden_size,
-            agent_args.output_channels,
-            agent_args.kernel_shape,
-        )
-    elif args.env_id == "iterated_matrix_game":
-        if args.att_type=='att':
+    if args.env_id == "iterated_matrix_game":
+        if args.att_type == 'att':
             network, initial_hidden_state = make_GRU_ipd_att_network(
                 action_spec, agent_args.hidden_size
             )
-        elif args.att_type=='avg':
+        elif args.att_type == 'avg':
             network, initial_hidden_state = make_GRU_ipd_avg_network(
                 action_spec, agent_args.hidden_size
             )
-        elif args.att_type=='nothing':
+        elif args.att_type == 'nothing':
             network, initial_hidden_state = make_GRU_ipd_network(
                 action_spec, agent_args.hidden_size
             )
 
     elif args.env_id == "InTheMatrix":
-        if args.att_type=='avg':
+        if args.att_type == 'avg':
             network, initial_hidden_state = make_GRU_ipditm_avg_network(
                 action_spec,
                 agent_args.hidden_size,

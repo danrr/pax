@@ -8,11 +8,11 @@ import jax.numpy as jnp
 from evosax import FitnessShaper
 
 import wandb
-from pax.utils import MemoryState, TrainingState, save
+from pax.utils import MemoryState, TrainingState
 
 # TODO: import when evosax library is updated
 # from evosax.utils import ESLog
-from pax.watchers import ESLog, cg_visitation, ipd_visitation, ipditm_stats
+from pax.watchers import ESLog, ipd_visitation, ipditm_stats
 
 MAX_WANDB_CALLS = 1000
 
@@ -59,6 +59,9 @@ class EvoScannedRunner:
     def __init__(
         self, agents, env, strategy, es_params, param_reshaper, save_dir, args
     ):
+        self.train_steps = 0
+        self.train_episodes = 0
+        self.start_time = time.time()
         self.args = args
         self.algo = args.es.algo
         self.es_params = es_params
@@ -67,15 +70,10 @@ class EvoScannedRunner:
         self.param_reshaper = param_reshaper
         self.popsize = args.popsize
         self.random_key = jax.random.PRNGKey(args.seed)
-        self.start_datetime = datetime.now()
         self.save_dir = save_dir
-        self.start_time = time.time()
         self.strategy = strategy
         self.top_k = args.top_k
-        self.train_steps = 0
-        self.train_episodes = 0
         self.ipd_stats = jax.jit(ipd_visitation)
-        self.cg_stats = jax.jit(jax.vmap(cg_visitation))
         self.ipditm_stats = jax.jit(
             jax.vmap(ipditm_stats, in_axes=(0, 2, 2, None))
         )
@@ -200,8 +198,6 @@ class EvoScannedRunner:
             rngs = self.split(rngs, 4)
             env_rng = rngs[:, :, :, 0, :]
 
-            # a1_rng = rngs[:, :, :, 1, :]
-            # a2_rng = rngs[:, :, :, 2, :]
             rngs = rngs[:, :, :, 3, :]
 
             a1, a1_state, new_a1_mem = agent1.batch_policy(
@@ -289,6 +285,7 @@ class EvoScannedRunner:
                 a2_state,
                 a2_mem,
             )
+
             return (
                 rngs,
                 obs1,
@@ -383,16 +380,7 @@ class EvoScannedRunner:
             fitness = traj_1.rewards.mean(axis=(0, 1, 3, 4))
             other_fitness = traj_2.rewards.mean(axis=(0, 1, 3, 4))
             # Stats
-            if args.env_id == "coin_game":
-                env_stats = jax.tree_util.tree_map(
-                    lambda x: x,
-                    self.cg_stats(env_state),
-                )
-
-                rewards_1 = traj_1.rewards.sum(axis=1).mean()
-                rewards_2 = traj_2.rewards.sum(axis=1).mean()
-
-            elif args.env_id in [
+            if args.env_id in [
                 "iterated_matrix_game",
             ]:
                 env_stats = jax.tree_util.tree_map(

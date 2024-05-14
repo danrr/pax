@@ -7,12 +7,7 @@ import jax.numpy as jnp
 import wandb
 
 from pax.utils import MemoryState, TrainingState, save
-from pax.utils import (
-    copy_state_and_mem,
-)
-from pax.watchers import cg_visitation, ipd_visitation, ipditm_stats
-from pax.watchers.cournot import cournot_stats
-from pax.watchers.fishery import fishery_stats
+from pax.watchers import ipd_visitation, ipditm_stats
 
 MAX_WANDB_CALLS = 1000
 
@@ -40,16 +35,6 @@ class MFOSSample(NamedTuple):
     dones: jnp.ndarray
     hiddens: jnp.ndarray
     meta_actions: jnp.ndarray
-
-
-class LOLASample(NamedTuple):
-    obs_self: jnp.ndarray
-    obs_other: jnp.ndarray
-    actions_self: jnp.ndarray
-    actions_other: jnp.ndarray
-    dones: jnp.ndarray
-    rewards_self: jnp.ndarray
-    rewards_other: jnp.ndarray
 
 
 @jax.jit
@@ -103,8 +88,6 @@ class RLRunner:
 
         self.reduce_opp_dim = jax.jit(_reshape_opp_dim)
         self.ipd_stats = jax.jit(ipd_visitation)
-        self.cg_stats = jax.jit(cg_visitation)
-        self.cournot_stats = cournot_stats
         # VMAP for num_envs
         self.ipditm_stats = jax.jit(ipditm_stats)
         # VMAP for num envs: we vmap over the rng but not params
@@ -195,8 +178,6 @@ class RLRunner:
             # unpack rngs
             rngs = self.split(rngs, 4)
             env_rng = rngs[:, :, 0, :]
-            # a1_rng = rngs[:, :, 1, :]
-            # a2_rng = rngs[:, :, 2, :]
             rngs = rngs[:, :, 3, :]
 
             a1, a1_state, new_a1_mem = agent1.batch_policy(
@@ -382,40 +363,12 @@ class RLRunner:
             traj_1, traj_2, a2_metrics = stack
 
             # update outer agent
-            if args.agent1 != "LOLA":
-                a1_state, _, a1_metrics = agent1.update(
-                    reduce_outer_traj(traj_1),
-                    self.reduce_opp_dim(obs1),
-                    a1_state,
-                    self.reduce_opp_dim(a1_mem),
-                )
-            if args.agent1 == "LOLA":
-                a1_metrics = None
-                # copy so we don't modify the original during simulation
-                self_state, self_mem = copy_state_and_mem(a1_state, a1_mem)
-                other_state, other_mem = copy_state_and_mem(a2_state, a2_mem)
-                # get new state of opponent after their lookahead optimisation
-                for _ in range(args.lola.num_lookaheads):
-                    _rng_run, _ = jax.random.split(_rng_run)
-                    lookahead_rng = jax.random.split(_rng_run, args.num_opps)
-
-                    # we want to batch this num_opps times
-                    other_state, other_mem = agent1.batch_in_lookahead(
-                        lookahead_rng,
-                        self_state,
-                        self_mem,
-                        other_state,
-                        other_mem,
-                    )
-                # get our new state after our optimisation based on ops new state
-                _rng_run, out_look_rng = jax.random.split(_rng_run)
-                a1_state = agent1.out_lookahead(
-                    out_look_rng, a1_state, a1_mem, other_state, other_mem
-                )
-
-            if args.agent2 == "LOLA":
-                raise NotImplementedError("LOLA not implemented for agent2")
-
+            a1_state, _, a1_metrics = agent1.update(
+                reduce_outer_traj(traj_1),
+                self.reduce_opp_dim(obs1),
+                a1_state,
+                self.reduce_opp_dim(a1_mem),
+            )
             # reset memory
             a1_mem = agent1.batch_reset(a1_mem, False)
             a2_mem = agent2.batch_reset(a2_mem, False)
@@ -423,15 +376,7 @@ class RLRunner:
             rewards_1 = traj_1.rewards.mean()
             rewards_2 = traj_2.rewards.mean()
             # Stats
-            if args.env_id == "coin_game":
-                env_stats = jax.tree_util.tree_map(
-                    lambda x: x,
-                    self.cg_stats(env_state),
-                )
-
-                rewards_1 = traj_1.rewards.sum(axis=1).mean()
-                rewards_2 = traj_2.rewards.sum(axis=1).mean()
-            elif args.env_id == "iterated_matrix_game":
+            if args.env_id == "iterated_matrix_game":
                 env_stats = jax.tree_util.tree_map(
                     lambda x: x.mean(),
                     self.ipd_stats(
@@ -450,13 +395,6 @@ class RLRunner:
                         args.num_envs,
                     ),
                 )
-            elif args.env_id == "Cournot":
-                env_stats = jax.tree_util.tree_map(
-                    lambda x: x.mean(),
-                    self.cournot_stats(traj_1.observations, _env_params, 2),
-                )
-            elif args.env_id == "Fishery":
-                env_stats = fishery_stats([traj_1, traj_2], 2)
             else:
                 env_stats = {}
 
@@ -541,16 +479,15 @@ class RLRunner:
                     flattened_metrics_1 = jax.tree_util.tree_map(
                         lambda x: jnp.mean(x), a1_metrics
                     )
-                    if self.args.agent1 != "LOLA":
-                        agent1._logger.metrics = (
+                    agent1._logger.metrics = (
                             agent1._logger.metrics | flattened_metrics_1
-                        )
+                    )
                     # metrics [outer_timesteps, num_opps]
                     flattened_metrics_2 = jax.tree_util.tree_map(
                         lambda x: jnp.sum(jnp.mean(x, 1)), a2_metrics
                     )
                     agent2._logger.metrics = (
-                        agent2._logger.metrics | flattened_metrics_2
+                            agent2._logger.metrics | flattened_metrics_2
                     )
 
                     for watcher, agent in zip(watchers, agents):

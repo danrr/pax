@@ -179,7 +179,7 @@ RED_COLOUR = (214.0, 39.0, 40.0)
 
 class InTheMatrix(environment.Environment):
     """
-    JAX Compatible version of *inTheMatix environment.
+    JAX Compatible version of *inTheMatrix environment.
     """
 
     # used for caching

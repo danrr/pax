@@ -6,7 +6,7 @@ from pax.utils import MemoryState, TrainingState
 
 
 class AgentInterface:
-    """Interface for agents to interact with runners and environemnts.
+    """Interface for agents to interact with runners and environments.
     Note this is not actually enforce by Python (we don't use ABCs) but
     it's a useful convention to follow.
     """

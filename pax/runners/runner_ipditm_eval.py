@@ -12,7 +12,7 @@ from tqdm import tqdm
 import wandb
 from pax.envs.in_the_matrix import EnvState, InTheMatrix
 from pax.utils import MemoryState, TrainingState, load
-from pax.watchers import cg_visitation, ipd_visitation, ipditm_stats
+from pax.watchers import ipd_visitation, ipditm_stats
 
 MAX_WANDB_CALLS = 1000
 
@@ -82,7 +82,6 @@ class IPDITMEvalRunner:
 
         self.reduce_opp_dim = jax.jit(_reshape_opp_dim)
         self.ipd_stats = jax.jit(ipd_visitation)
-        self.cg_stats = jax.jit(cg_visitation)
         # VMAP for num envs: we vmap over the rng but not params
         env.reset = jax.vmap(env.reset, (0, None), 0)
         env.step = jax.vmap(

@@ -105,19 +105,6 @@ def to_numpy(values):
     return jax.tree_util.tree_map(np.asarray, values)
 
 
-class LOLATrainingState(NamedTuple):
-    """Training state consists of network parameters, optimiser state, random key, timesteps, and extras."""
-
-    policy_params: hk.Params
-    value_params: hk.Params
-    policy_opt_state: optax.GradientTransformation
-    value_opt_state: optax.GradientTransformation
-    random_key: jnp.ndarray
-    timesteps: int
-    extras: Mapping[str, jnp.ndarray]
-    hidden: None
-
-
 class TrainingState(NamedTuple):
     """Training state consists of network parameters, optimiser state, random key, timesteps"""
 
@@ -199,28 +186,6 @@ def copy_state_and_mem(state, mem):
         },
     )
     return state, mem
-
-
-def copy_extended_state_and_network(agent):
-    import copy
-
-    """Copies an agent state and returns the state"""
-    state = LOLATrainingState(
-        policy_params=copy.deepcopy(agent._state.policy_params),
-        value_params=copy.deepcopy(agent._state.value_params),
-        policy_opt_state=agent._state.policy_opt_state,
-        value_opt_state=agent._state.value_opt_state,
-        random_key=agent._state.random_key,
-        timesteps=agent._state.timesteps,
-        extras={
-            "values": jnp.zeros(agent._num_envs),
-            "log_probs": jnp.zeros(agent._num_envs),
-        },
-        hidden=None,
-    )
-    policy_network = agent.policy_network
-    value_network = agent.value_network
-    return state, policy_network, value_network
 
 
 # TODO make this part of the args

@@ -2,10 +2,7 @@ import jax
 import jax.numpy as jnp
 
 from pax.agents.naive_exact import NaiveExact
-from pax.agents.strategies import EvilGreedy, GrimTrigger, TitForTat
-from pax.envs.coin_game import CoinGame
-from pax.envs.coin_game import EnvParams as CoinGameParams
-from pax.envs.coin_game import EnvState as CoinGameState
+from pax.agents.strategies import  GrimTrigger, TitForTat
 from pax.envs.infinite_matrix_game import EnvParams as InfiniteMatrixGameParams
 from pax.envs.infinite_matrix_game import InfiniteMatrixGame
 
@@ -298,45 +295,3 @@ def test_naive_tft_as_second_player():
         rng, env_state, (tft_action2, action), env_params
     )
     assert jnp.allclose(2.0, reward1, atol=0.01)
-
-
-def test_coin_chaser():
-    rng = jax.random.PRNGKey(0)
-    env = CoinGame(
-        num_inner_steps=8, num_outer_steps=2, cnn=True, egocentric=True
-    )
-    env_param = CoinGameParams(payoff_matrix=[[1, 1, -2], [1, 1, -2]])
-    obs, state = env.reset(rng, env_param)
-
-    env_state = CoinGameState(
-        red_pos=jnp.array([0, 0]),
-        blue_pos=jnp.array([2, 0]),
-        red_coin_pos=jnp.array([0, 2]),
-        blue_coin_pos=jnp.array([2, 1]),
-        inner_t=state.inner_t,
-        outer_t=state.outer_t,
-        red_coop=0,
-        red_defect=0,
-        blue_coop=0,
-        blue_defect=0,
-        counter=state.counter,
-        coop1=state.coop1,
-        coop2=state.coop2,
-        last_state=state.last_state,
-    )
-
-    #  r 0 rc
-    #  0 0 0
-    #  b bc 0
-    # update locations (agent 1: [0, 0] agent 2: [2, 1])
-    obs, env_state, rewards, done, info = env.step(
-        rng, env_state, (4, 4), env_param
-    )
-    agent = EvilGreedy(4)
-    a1 = agent._greedy_step(obs[0])
-    # take a left
-    assert a1 == 1
-
-    # take a right
-    a2 = agent._greedy_step(obs[1])
-    assert a2 == 0
