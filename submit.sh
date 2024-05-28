@@ -9,7 +9,6 @@
 module purge
 module load baskerville
 module load bask-apps/live
-module load jax
 
 cd ~/pax
 source .venv/bin/activate
