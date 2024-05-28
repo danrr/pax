@@ -9,6 +9,7 @@
 module purge
 module load baskerville
 module load bask-apps/live
+module load Python/3.11.3-GCCcore-12.3.0
 
 cd ~/pax
 source .venv/bin/activate
