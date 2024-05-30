@@ -416,10 +416,11 @@ class EvoRunner:
                 a2_metrics,
             )
 
-        self.rollout = jax.pmap(
-            _rollout,
-            in_axes=(0, None, None, None, None),
-        )
+        # self.rollout = jax.pmap(
+        #     _rollout,
+        #     in_axes=(0, None, None, None, None),
+        # )
+        self.rollout = jax.jit(_rollout)
 
         print(
             f"Time to Compile Jax Methods: {time.time() - self.start_time} Seconds"
