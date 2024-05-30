@@ -405,7 +405,7 @@ class PPO(AgentInterface):
                 action_extras["values"],
             )
 
-            # _value = jax.lax.expand_dims(_value, [0])
+            _value = jax.lax.expand_dims(_value, [0])
 
             # need to add final value here
             traj_batch = traj_batch._replace(
