@@ -285,12 +285,19 @@ class EvoRunner:
             _env_params: Any,
         ):
             # env reset
+            print(jax.random.split(_rng_run, args.num_envs))
+
+            print(len([jax.random.split(_rng_run, args.num_envs)]
+                * args.num_opps
+                * args.popsize))
+            print(args)
+
+
             env_rngs = jnp.concatenate(
                 [jax.random.split(_rng_run, args.num_envs)]
                 * args.num_opps
                 * args.popsize
             ).reshape((args.popsize, args.num_opps, args.num_envs, -1))
-
             obs, env_state = env.reset(env_rngs, _env_params)
             rewards = [
                 jnp.zeros((args.popsize, args.num_opps, args.num_envs)),
@@ -392,10 +399,12 @@ class EvoRunner:
                 a2_metrics,
             )
 
-        self.rollout = jax.pmap(
-            _rollout,
-            in_axes=(0, None, None, None, None),
-        )
+        # self.rollout = jax.pmap(
+        #     _rollout,
+        #     in_axes=(0, None, None, None, None),
+        # )
+
+        self.rollout = _rollout
 
         print(
             f"Time to Compile Jax Methods: {time.time() - self.start_time} Seconds"
