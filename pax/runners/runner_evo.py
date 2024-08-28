@@ -127,19 +127,13 @@ class EvoRunner:
             )
         )
 
-        if args.agent2 == "NaiveEx":
-            # special case where NaiveEx has a different call signature
-            agent2.batch_init = jax.jit(
-                jax.vmap(jax.vmap(agent2.make_initial_state))
+        agent2.batch_init = jax.jit(
+            jax.vmap(
+                jax.vmap(agent2.make_initial_state, (0, None), 0),
+                (0, None),
+                0,
             )
-        else:
-            agent2.batch_init = jax.jit(
-                jax.vmap(
-                    jax.vmap(agent2.make_initial_state, (0, None), 0),
-                    (0, None),
-                    0,
-                )
-            )
+        )
 
         agent2.batch_policy = jax.jit(jax.vmap(jax.vmap(agent2._policy, 0, 0)))
         agent2.batch_reset = jax.jit(
@@ -155,19 +149,6 @@ class EvoRunner:
                 (1, 0, 0, 0),
             )
         )
-        if args.agent2 != "NaiveEx":
-            # NaiveEx requires env first step to init.
-            init_hidden = jnp.tile(agent2._mem.hidden, (args.num_opps, 1, 1))
-
-            a2_rng = jnp.concatenate(
-                [jax.random.split(agent2._state.random_key, args.num_opps)]
-                * args.popsize
-            ).reshape(args.popsize, args.num_opps, -1)
-
-            agent2._state, agent2._mem = agent2.batch_init(
-                a2_rng,
-                init_hidden,
-            )
 
         # jit evo
         strategy.ask = jax.jit(strategy.ask)
@@ -310,6 +291,8 @@ class EvoRunner:
                 * args.popsize
             ).reshape((args.popsize, args.num_opps, args.num_envs, -1))
 
+            quit()
+
             obs, env_state = env.reset(env_rngs, _env_params)
             rewards = [
                 jnp.zeros((args.popsize, args.num_opps, args.num_envs)),
@@ -320,18 +303,14 @@ class EvoRunner:
             _a1_state = _a1_state._replace(params=_params)
             _a1_mem = agent1.batch_reset(_a1_mem, False)
             # Player 2
-            if args.agent2 == "NaiveEx":
-                a2_state, a2_mem = agent2.batch_init(obs[1])
-
-            else:
-                # meta-experiments - init 2nd agent per trial
-                a2_rng = jnp.concatenate(
-                    [jax.random.split(_rng_run, args.num_opps)] * args.popsize
-                ).reshape(args.popsize, args.num_opps, -1)
-                a2_state, a2_mem = agent2.batch_init(
-                    a2_rng,
-                    agent2._mem.hidden,
-                )
+            # meta-experiments - init 2nd agent per trial
+            a2_rng = jnp.concatenate(
+                [jax.random.split(_rng_run, args.num_opps)] * args.popsize
+            ).reshape(args.popsize, args.num_opps, -1)
+            a2_state, a2_mem = agent2.batch_init(
+                a2_rng,
+                agent2._mem.hidden,
+            )
                 # generate an array of shape [10]
                 # random_numbers = jax.random.uniform(_rng_run, minval=1e-5, maxval=1.0, shape=(10,))
                 # # repeat the array 1000 times along the first dimension
