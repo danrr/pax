@@ -291,8 +291,6 @@ class EvoRunner:
                 * args.popsize
             ).reshape((args.popsize, args.num_opps, args.num_envs, -1))
 
-            quit()
-
             obs, env_state = env.reset(env_rngs, _env_params)
             rewards = [
                 jnp.zeros((args.popsize, args.num_opps, args.num_envs)),
@@ -317,7 +315,7 @@ class EvoRunner:
                 # learning_rates = jnp.tile(random_numbers, (1000, 1))
                 # a2_state.opt_state[2].hyperparams['step_size'] = learning_rates
                 # jax.debug.breakpoint()
-
+            quit()
             # run trials
             vals, stack = jax.lax.scan(
                 _outer_rollout,
