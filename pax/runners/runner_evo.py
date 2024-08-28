@@ -315,7 +315,6 @@ class EvoRunner:
                 # learning_rates = jnp.tile(random_numbers, (1000, 1))
                 # a2_state.opt_state[2].hyperparams['step_size'] = learning_rates
                 # jax.debug.breakpoint()
-            quit()
             # run trials
             vals, stack = jax.lax.scan(
                 _outer_rollout,
